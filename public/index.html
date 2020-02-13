@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="php">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/vue/dist/vue.js"></script>
+  <link rel="stylesheet" href="./stylesheets/style.css">
+</head>
+
+<body>
+
+  <div id="app" class="contaner">
+    <div>名前： <input type="text" v-model="name"></div>
+    <div>部屋： <input type="text" v-model="room"></div>
+    <button class="button" @click="roomInRandom">ランダムマッチ</button>
+    <button class="button" @click="roomIn">部屋作成</button>
+    <button class="button" @click="findRoom">部屋に入る</button>
+  </div>
+
+  <script src="javascripts/main.js"></script>
+</body>
+
+</html>
