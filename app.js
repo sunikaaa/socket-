@@ -45,7 +45,9 @@ app.use(function (err, req, res, next) {
   res.render('error');
 });
 
-io.on('connection', socketFanc.socketConnect(io, State));
+// io.on('connection', socketFanc.socketConnect(io, State));
+
+io.sockets.on('connection', socketFanc.socketConnect(io));
 var os = require('os');
 
 server.listen(PORT, () => {

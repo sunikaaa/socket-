@@ -16,7 +16,6 @@ socket.on("opponent-find", (val) => {
   console.log(val)
   socket.emit("start-game", val)
 });
-console.log(socket.emit);
 socket.on("hello", val => console.log(val))
 socket.on('opponent-disconnect', val => console.log(val));
 
@@ -24,7 +23,7 @@ socket.on('random', obj => {
   console.log(obj);
 })
 
-socket.emit('testToServer', "testtesttest");
+// socket.emit('testToServer', "testtesttest");
 socket.on("testFromServer", (val) => console.log(val));
 
 socket.on("alredyExist", () => {
@@ -32,6 +31,7 @@ socket.on("alredyExist", () => {
 })
 
 socket.on("get-error", () => console.log("serverError"));
+socket.on("duplicate-error", () => console.log("duplicate"));
 
 
 
@@ -51,8 +51,8 @@ new Vue({
       });
     },
     roomIn() {
-      if (this.room === '') return;
-      if (this.name === '') return;
+      // if (this.room === '') return;
+      // if (this.name === '') return;
       socket.emit('create-room', {
         name: this.name,
         roomId: this.room
@@ -60,8 +60,8 @@ new Vue({
       console.log("create");
     },
     findRoom() {
-      if (this.room === '') return;
-      if (this.name === '') return;
+      // if (this.room === '') return;
+      // if (this.name === '') return;rad
       socket.emit('enter-room', {
         name: this.name,
         roomId: this.room

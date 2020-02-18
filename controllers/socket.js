@@ -1,50 +1,117 @@
-const _  = require('lodash');
-// import State from './state';
-const SocketController = require('./socketController.js');
-const Socket = require('./socketController.js').Socket;
-const GameStart = require('./socketController.js').Game;
+const _ = require('lodash');
+const State = require('./state').state;
+
+const {
+  Either,
+  Right,
+  Left,
+  Maybe,
+  IO
+} = require('./monads.js');
 
 
-const createPare = SocketController.createPare();
+
 const createRandom = () => Math.floor(Math.random() * 5 + 5);
-const StickSendVal = (fn,obj) => obj.val = fn()
-const emitRandom = _.partial(StickSendVal,createRandom);
-const isMid = (socketid,obj) => socketid === obj.mid;
-const roomMasterEmit = obj => (socket,io,fireName,fn)=>{
-  if(socket.id === obj.mid){
-    io.to(obj.roomId).emit(fireName,fn(obj))
-  }
+const isMid = (socketid, obj) => socketid === obj.mid;
+
+
+const waitPare = (val) => {
+  return _.isEmpty(State.getWatingPlayer()) ? Either.left(val) : Either.right(val)
 }
 
 
-exports.socketConnect = (io,State) => socket => {
+exports.socketConnect = (io) => socket => {
+  const roomEmit = _.curry((socketId, obj) => {
+    return io.to(obj.roomId).emit('opponent-disconnect', socketId);
+  })
+  const errorExist = (errorName, socketId) => {
+    io.to(socketId).emit(errorName);
+    return Maybe.nothing();
+  }
+  const emitMastar = (socketId, fireName, req, res) => {
+    if (isMid(socketId, req)) {
+      io.to(req.roomId).emit(fireName, req.val = res);
+    }
+  }
+  const isExistRoom = _.curry((socketId, req) => {
+    return State.isExistRoom(req.roomId) ? errorExist('room-isExist', socketId) : Maybe.just(req)
+  })
+  const isNotExistRoom = _.curry((socketId, req) => {
+    return !State.isExistRoom(req.roomId) ? errorExist('room-isnotExist', socketId) : Maybe.just(req);
+  })
+  const isFullMenber = _.curry((socketId, req) => {
+    return State.isFullRoom(req.roomId) ? errorExist('room-isFull', socketId) : Maybe.just(req);
+  })
 
-    const emitMaster = (val)=>{
-        new GameStart(socket,io).emitRoom('random',emitRandom(val),val.roomId);
-      }
-  SOCKET = new Socket(socket,io);
-  Game = new GameStart(socket,io);
-  console.log(SOCKET.id(),"確認");
-  //roomObj {
-    //  name:'name',
-    //  roomId: 'roomId'
-    SOCKET.on('create-room',createPare(SOCKET,State).createRoom)
-    SOCKET.on('enter-room',createPare(SOCKET,State).enterRoom)
-
-    SOCKET.on('wait-opponent',createPare(SOCKET,State).waitPare)
-
-    SOCKET.disConnect(createPare(SOCKET,State).disConnect);
-
-    SOCKET.on('start-game');
-new Socket(socket,io).on('start-game',(val)=>{
-  isMid(socket.id,val) ? emitMaster(val) : '';
-})
+  const safeIsDuplicate = _.curry((socketId, req) => {
+    return State.isDuplicatePlayer(socketId) ? errorExist('duplicate-error', socketId) : Maybe.just(req);
+  });
 
 
+  const socketJoin = _.curry((fireName, room) => {
+    return socket.join(room.roomId, () => {
+      io.to(room.roomId).emit(fireName, room);
+    })
+  })
+  const createRoom = _.curry((socketid, req) => {
+    State.chain()
+      .createRoom(socketid, req)
+      .save()
+      .getRoom()
+      .then(socketJoin('opponent-wating'));
+  })
+  const joinRoom = _.curry((socketid, req) => {
+    State.chain()
+      .getWatingPlayer(req)
+      .roomIn(socketid, req)
+      .save()
+      .getRoom()
+      .then(socketJoin('opponent-find'));
+  })
+  const stateDisconnect = socketId => {
+    return State.chain()
+      .getRoomId(socketId)
+      .disConnect()
+      .save()
+      .getRoom()
+  }
+
+  socket.on('disconnect', () => {
+    Maybe.fromNullable(stateDisconnect(socket.id))
+      .map(roomEmit(socket.id))
+  })
 
 
+  socket.on('create-room', val => {
+    Maybe.fromNullable(val)
+      .chain(safeIsDuplicate(socket.id))
+      .chain(isExistRoom(socket.id))
+      .chain(createRoom(socket.id))
+  });
+  socket.on('enter-room', val => {
+    Maybe.fromNullable(val)
+      .chain(safeIsDuplicate(socket.id))
+      .chain(isNotExistRoom(socket.id))
+      .chain(isFullMenber(socket.id))
+      .chain(joinRoom(socket.id))
+  })
 
-  SOCKET.on('testToServer',(val)=>{
-    SOCKET.emit('testFromServer',{uid:SOCKET.id(),data:val});
+  socket.on('wait-opponent', req => {
+    Maybe.fromNullable(req)
+      .chain(safeIsDuplicate(socket.id))
+      .chain(waitPare)
+      .map(joinRoom(socket.id))
+      .orElse(createRoom(socket.id))
+  })
+
+  socket.on('start-game', room => {
+    emitMastar(socket.id, 'random', room, createRandom());
+  })
+
+  socket.on('testToServer', (val) => {
+    socket.emit('testFromServer', {
+      uid: socket.id,
+      data: val
+    });
   })
 }

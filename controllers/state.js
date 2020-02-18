@@ -45,27 +45,57 @@ class State {
       console.log('use "save" with chain');
       return;
     }
-    // console.log("this is old", this.oldClass.room)
-    console.log("this is now", this.room)
+    // console.log("this is now", this.room)
     this.oldClass.room = this.room;
-    // this.oldClass.roomId = this.roomId;
-    return new State(this.room, false, this, this.roomId);
+    // return new State(this.room, false, this, this.roomId, this.flash);
+    return this.isChain(this.room, this.roomId, this.flash);
   }
 
+
+
+
   isChain(room, roomId, flash = undefined) {
-    return this.chain ?
+    if (typeof flash === Object || typeof flash === Array) {
+      flash = _.cloneDeep(flash);
+    }
+    return this.chaining ?
       new State(room, this.chaining, this.oldClass, roomId, flash) :
       flash;
   }
 
+  isDuplicatePlayer(socketId) {
+    let isDupricate = _.some(this.room, theRoom => {
+      // console.log(theRoom.menber, "some", socketId);
+      return theRoom.menber.some(equal(socketId, 'id'))
+    })
+    console.log(isDupricate, "isDuplicate", socketId);
+
+
+    return this.isChain(this.room, undefined, isDupricate)
+  }
+
+
   getRoom(roomId = undefined) {
-    return roomId ? this.room[roomId] : this.room[this.roomId];
+    return this.isChain(this.room, this.roomId, roomId ? _.cloneDeep(this.room[roomId]) : _.cloneDeep(this.room[this.roomId]));
+  }
+
+  getRoomFn(fn, roomId) {
+    return roomId ? fn(this.room[roomId]) : fn(this.room[this.roomId]);
+  }
+
+  then(fn) {
+    return this.isChain(this.room, this.roomId, fn(this.flash));
   }
 
   getRoomId(socketId) {
-    return _.filter(this.room, (room) => {
-      console.log(room)
-    })
+    if (this.roomId === undefined) {
+      let id = socketId || this.flash
+      const theRoom = _.find(this.room, (room) => {
+        return room.menber.some(equal(id, 'id'));
+      }) || {}
+      return this.isChain(this.room, theRoom.roomId, theRoom.roomId);
+    }
+    return this.roomId;
   }
 
   roomIn(socketId, receive) {
@@ -76,21 +106,24 @@ class State {
     return this.isChain(this.room, this.roomId);
   }
 
-
-
-  getWatingPlayer() {
-    const wating = _.filter(this.room, randomRoom => randomRoom.random).filter(lengthN(1, "menber"))[0];
-    console.log(wating, "filter");
-    return wating ? this.isChain(this.room, wating.roomId, wating) : this.isChain(this.room, undefined, wating)
+  isFullRoom(roomId) {
+    return this.room[roomId].menber.length > 1;
   }
 
-  //return roomId
+  getWatingPlayer(receive) {
+    if (typeof receive == "object") {
+      if (receive.roomId !== undefined) {
+        return this.isChain(this.room, receive.roomId)
+      }
+    }
+    let wating = _.filter(this.room, randomRoom => randomRoom.random).filter(lengthN(1, "menber"))[0] || {};
+    return this.isChain(this.room, wating.roomId, wating)
+  }
+
 
   //return roomId
   createRoom(socketId, receive = false) {
-    if (receive === false) {
-      throw Error;
-    }
+
     let roomId = receive.roomId ? receive.roomId : socketId + Date.now();
     this.room[roomId] = {
       roomId: roomId,
@@ -102,6 +135,10 @@ class State {
       }]
     };
     return this.isChain(this.room, roomId)
+  }
+
+  getFlash() {
+    return this.flash;
   }
 
 
@@ -125,14 +162,10 @@ class State {
     return obj;
   }
 
-  disConnect(socketId) {
+  disConnect() {
     console.log('notfound wating');
-    let isInRoom = _.filter(this.room, obj => obj.menber.some(equal(socketId, 'id'))).reduce(roomToObj, {});
-    // const disconnectRoom = this.someRoomId(id) ? this.filterRoom(id) : false;
-    // disconnectRoom ? this.deleteRoom(disconnectRoom[0].roomId) : false;
-    // this.consoleId();
-    console.log(isInRoom, isInRoom.roomId);
-    return this.isChain(isInRoom)
+    delete this.room[this.roomId];
+    return this.isChain(this.room, this.roomId, this.roomId);
   }
 
   deleteRoom(id) {
@@ -182,7 +215,7 @@ class State {
   }
 
   isExistRoom(roomId) {
-    return this.room.some(equal(roomId, 'roomId'));
+    return _.some(this.room, equal(roomId, 'roomId'));
   }
 }
 
