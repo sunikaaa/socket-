@@ -21,6 +21,8 @@
     "node": "^13.6.0",
     "nodemon": "^2.0.2",
     "socket.io": "^2.3.0",
-    "vue": "^2.6.11"
+    "vue": "^2.6.11",
+    "youtube-chat": "^1.0.2",
+    "youtube-live-chat": "^1.0.3"
   }
 }

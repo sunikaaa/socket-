@@ -1,44 +1,46 @@
 const socket = io();
-let player = socket.on('post-id', id => id)
+let player = socket.on('post-id', id => id);
 socket.on('pare-set', value => {
   console.log(value);
   setTimeout(() => {
     console.log(`this time is ${value}`);
   }, value * 1000);
-})
+});
 // socket.emit('getNumber',10);
-socket.on('room-in', (val) => {
-  socket.emit("start-game", val);
-  console.log(val, "start")
+socket.on('room-in', val => {
+  socket.emit('start-game', val);
+  console.log(val, 'start');
 });
-socket.on('opponent-waiting', (val) => console.log(val));
-socket.on("opponent-find", (val) => {
-  console.log(val)
-  socket.emit("start-game", val)
+socket.on('opponent-waiting', val => console.log(val));
+socket.on('opponent-find', val => {
+  console.log(val);
+  socket.emit('start-game', val);
 });
-socket.on("hello", val => console.log(val))
+socket.on('hello', val => console.log(val));
 socket.on('opponent-disconnect', val => console.log(val));
 
 socket.on('random', obj => {
   console.log(obj);
-})
+});
 
 // socket.emit('testToServer', "testtesttest");
-socket.on("testFromServer", (val) => console.log(val));
+socket.on('testFromServer', val => console.log(val));
 
-socket.on("alredyExist", () => {
-  confirm("既にルームに入ってます。退出しますか？") ? socket.emit('room-exit') : '';
-})
+socket.on('alredyExist', () => {
+  confirm('既にルームに入ってます。退出しますか？')
+    ? socket.emit('room-exit')
+    : '';
+});
 
-socket.on("get-error", () => console.log("serverError"));
-socket.on("duplicate-error", () => console.log("duplicate"));
+socket.on('get-error', () => console.log('serverError'));
+socket.on('duplicate-error', () => console.log('duplicate'));
 
-
+// import LiveChat from 'youtube-chat';
 
 new Vue({
   el: '#app',
   data: {
-    hello: "hello",
+    hello: 'hello',
     socket: '',
     name: '',
     room: ''
@@ -57,7 +59,7 @@ new Vue({
         name: this.name,
         roomId: this.room
       });
-      console.log("create");
+      console.log('create');
     },
     findRoom() {
       // if (this.room === '') return;
@@ -67,6 +69,23 @@ new Vue({
         roomId: this.room
       });
     }
+  }
+});
 
-  },
-})
+const liveChat = new LiveChat({
+  channelId: 'UCNsidkYpIAQ4QaufptQBPHQ'
+});
+liveChat.on('error', err => {
+  console.log(err);
+});
+
+liveChat.on('start', liveId => {
+  console.log(liveId);
+});
+liveChat.on('end', reason => {
+  console.log(reason);
+});
+liveChat.on('comment', comment => {
+  console.log(comment);
+});
+console.log(liveChat);
